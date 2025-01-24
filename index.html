@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Mock Interview with Supabase</title>
+    <title>Job Pass</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .hidden {
@@ -223,6 +223,58 @@
             top: 10px;
             cursor: pointer;
         }
+
+        .loader-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+
+        .loader {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 10px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .vendor-option {
+            padding: 15px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        .vendor-option img {
+            max-width: 100px;
+            height: auto;
+        }
     </style>
 </head>
 
@@ -275,44 +327,32 @@
 
     <div id="upgradeModal" class="modal">
         <div class="modal-content">
-            <div class="plans-section">
-                <h2>Select Recording Hours</h2>
-                <div class="plan-option" onclick="selectPlan(10)">
-                    <span>10 Hours</span>
-                    <span class="plan-price">₹50</span>
-                </div>
-                <div class="plan-option" onclick="selectPlan(50)">
-                    <span>50 Hours</span>
-                    <span class="plan-price">₹250</span>
-                </div>
-                <div class="plan-option" onclick="selectPlan(100)">
-                    <span>100 Hours</span>
-                    <span class="plan-price">₹500</span>
-                </div>
-                <div id="totalAmount" class="total-amount"></div>
-            </div>
+            <div id="planOptions"></div>
             <div class="qr-section">
                 <img src="gpay.png" alt="UPI QR Code">
                 <p>Scan and pay with any BHIM UPI app</p>
-                <!-- <div class="payment-logos">
-                    <img src="gpay_logo.png" alt="Google Pay">
-                    <img src="phonepe_logo.png" alt="PhonePe">
-                    <img src="paytm_logo.png" alt="Paytm">
-                </div> -->
             </div>
         </div>
     </div>
 
+    <div id="loaderOverlay" class="loader-overlay">
+        <div class="loader">
+            <div class="spinner"></div>
+            <div>Saving recording...</div>
+        </div>
+    </div>
+
     <script>
+
+        const ITEMS_PER_PAGE = 3;
+        let currentPage = 1;
+
         // Supabase configuration
         // const { createClient } = supabase;
         const supabaseClient = supabase.createClient(
             'https://qbodjnxwkzoomzdfnyeb.supabase.co',
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFib2Rqbnh3a3pvb216ZGZueWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MTI0NjQsImV4cCI6MjA1MzI4ODQ2NH0.sIcnhZB674AfiLepdLDcSd_igIU96mVVBjk-loTw-94'
         );
-
-        const ITEMS_PER_PAGE = 12;
-let currentPage = 1;
 
 
         let recordingStartTime;
@@ -428,8 +468,7 @@ let currentPage = 1;
         function showInterviewSection() {
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('interviewSection').classList.remove('hidden');
-            document.getElementById('signOutButton').style.display = 'inline-block'; // Changed from 'block'
-            initCamera();
+            document.getElementById('signOutButton').style.display = 'inline-block';
         }
 
         // Interview recording logic
@@ -474,21 +513,69 @@ let currentPage = 1;
             nextButton.disabled = currentQuestionIndex === questions.length - 1;
         }
 
-        function startRecording() {
+        async function startRecording() {
             if (!userData || userData.recording_hours_left <= 0) {
-                alert('No recording time left. Please upgrade your plan.');
+                alert('No recording time left');
                 return;
             }
 
-            recordingStartTime = Date.now();
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+
+            // Get streams and combine audio
+            const canvasStream = canvas.captureStream();
+            const audioTrack = stream.getAudioTracks()[0];
+            const combinedStream = new MediaStream([...canvasStream.getTracks(), audioTrack]);
+
+            mediaRecorder = new MediaRecorder(combinedStream);
             recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    recordedChunks.push(e.data);
-                }
+                if (e.data.size > 0) recordedChunks.push(e.data);
             };
+
+            const logo = new Image();
+            logo.src = 'infosys.png';
+
+            logo.onload = function () {
+                console.log('Logo loaded successfully');
+            };
+
+            logo.onerror = function () {
+                console.error('Error loading logo');
+            };
+
+            // const bannerHeight = 60;
+            // const logoHeight = bannerHeight - 10;
+            // const logoWidth = logoHeight;
+            // const logoX = 5;
+            // const logoY = 5;
+
+            function drawComposite() {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Draw question banner at top
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, 0, canvas.width, 60);
+
+                // Draw question text
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Arial';
+                ctx.fillText(`Q${currentQuestionIndex + 1}: ${questions[currentQuestionIndex]}`, 15, 35);
+
+                // Draw logo in bottom left corner
+                if (logo.complete && logo.naturalHeight !== 0) {
+                    const logoSize = 100; // Larger size for clarity
+                    ctx.drawImage(logo, 20, canvas.height - logoSize - 20, logoSize, logoSize);
+                }
+
+                requestAnimationFrame(drawComposite);
+            }
+
+            drawComposite();
             mediaRecorder.start();
+            recordingStartTime = Date.now();
             startButton.disabled = true;
             stopButton.disabled = false;
             saveButton.disabled = true;
@@ -505,6 +592,11 @@ let currentPage = 1;
             startButton.disabled = false;
             stopButton.disabled = true;
             saveButton.disabled = false;
+
+            // Stop the webcam stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
         }
 
         async function saveRecording() {
@@ -512,57 +604,68 @@ let currentPage = 1;
                 alert('No recording to save. Please record something first.');
                 return;
             }
-            const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-            if (userError) {
-                alert('Authentication error: ' + userError.message);
-                return;
+
+            document.getElementById('loaderOverlay').style.display = 'flex';
+
+            try {
+                const { data: { user } } = await supabaseClient.auth.getUser();
+                if (!user) return;
+
+                const recordingDuration = (Date.now() - recordingStartTime) / (1000 * 60 * 60);
+
+                const { data: profile } = await supabaseClient
+                    .from('user_profiles')
+                    .select('recording_hours_left, total_recorded')
+                    .eq('user_id', user.id)
+                    .single();
+
+                let updatedHours = profile.recording_hours_left - recordingDuration;
+                let updatedTotal = profile.total_recorded + recordingDuration;
+
+                const { error: updateError } = await supabaseClient
+                    .from('user_profiles')
+                    .update({
+                        recording_hours_left: updatedHours,
+                        total_recorded: updatedTotal
+                    })
+                    .eq('user_id', user.id);
+
+                if (updateError) throw new Error('Error updating recording time');
+
+                userData = {
+                    ...userData,
+                    recording_hours_left: updatedHours,
+                    total_recorded: updatedTotal
+                };
+                updateSubscriptionDisplay();
+
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const fileName = `interview-${Date.now()}.webm`;
+
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('recordings')
+                    .upload(`${user.id}/${fileName}`, blob);
+
+                if (uploadError) throw new Error('Error saving recording');
+
+                const { error: recordingError } = await supabaseClient
+                    .from('recordings')
+                    .insert([{
+                        file_name: `${user.id}/${fileName}`,
+                        user_id: user.id,
+                        recorded_at: new Date().toISOString(),
+                        duration: recordingDuration
+                    }]);
+
+                if (recordingError) throw new Error('Error saving recording metadata');
+
+                alert('Recording saved successfully!');
+                loadRecordings();
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                document.getElementById('loaderOverlay').style.display = 'none';
             }
-
-            const recordingDuration = (Date.now() - recordingStartTime) / (1000 * 60 * 60);
-
-            // Update user's remaining hours
-            const { data, error } = await supabaseClient
-                .from('user_profiles')
-                .update({
-                    recording_hours_left: userData.recording_hours_left - recordingDuration,
-                    total_recorded: userData.total_recorded + recordingDuration
-                })
-                .eq('user_id', user.id);
-
-            if (error) {
-                alert('Error updating recording time: ' + error.message);
-                return;
-            }
-
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const fileName = `interview-${Date.now()}.webm`;
-
-            const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                .from('recordings')
-                .upload(`${user.id}/${fileName}`, blob);
-
-            if (uploadError) {
-                alert('Error saving recording: ' + uploadError.message);
-                return;
-            }
-
-            const { error: recordingError } = await supabaseClient
-                .from('recordings')
-                .insert([{
-                    file_name: `${user.id}/${fileName}`,
-                    user_id: user.id,
-                    recorded_at: new Date().toISOString(),
-                    duration: recordingDuration
-                }]);
-
-            if (recordingError) {
-                alert('Error saving recording metadata: ' + recordingError.message);
-                return;
-            }
-
-            await loadUserData();
-            alert('Recording saved successfully!');
-            loadRecordings();
         }
 
         async function loadRecordings() {
@@ -649,8 +752,33 @@ let currentPage = 1;
             document.getElementById('totalAmount').textContent = `Total Amount: ₹${amount}`;
         }
 
-        function upgradePlan() {
+        async function upgradePlan() {
             document.getElementById('upgradeModal').style.display = 'block';
+
+            const { data: vendors } = await supabaseClient
+                .from('vendors')
+                .select('*')
+                .eq('active', true)
+                .gte('expiry_date', new Date().toISOString());
+
+            const vendorGrid = vendors.map(vendor => `
+       <div class="vendor-option" onclick="selectVendor('${vendor.vendor_code}')">
+           <img src="${supabaseClient.storage.from('vendor-logos').getPublicUrl(vendor.vendor_code + '.png')}" />
+           <div class="pricing">
+               <div>10 Hours - ₹50</div>
+               <div>50 Hours - ₹250</div>
+               <div>100 Hours - ₹500</div>
+           </div>
+       </div>
+   `).join('');
+
+            document.getElementById('planOptions').innerHTML = vendorGrid;
+        }
+
+        async function selectVendor(vendorCode) {
+            document.getElementById('qrSection').style.display = 'block';
+            // Store selected vendor for later use
+            selectedVendorCode = vendorCode;
         }
 
         function selectPlan(hours) {
@@ -690,14 +818,15 @@ let currentPage = 1;
 
 
         window.onclick = function (event) {
-            if (event.target == document.getElementById('upgradeModal')) {
-                document.getElementById('upgradeModal').style.display = 'none';
-            }
-        }
+            const upgradeModal = document.getElementById('upgradeModal');
+            const videoModal = document.getElementById('videoModal');
 
-        window.onclick = function (event) {
-            const modal = document.getElementById('videoModal');
-            if (event.target == modal) {
+            if (upgradeModal && event.target == upgradeModal) {
+                upgradeModal.style.display = 'none';
+                const qrSection = document.getElementById('qrSection');
+                if (qrSection) qrSection.style.display = 'none';
+            }
+            if (videoModal && event.target == videoModal) {
                 closeVideoModal();
             }
         }
