@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mock Interview with Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .hidden {
+            display: none;
+        }
+
+        .recording-list {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .recording-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+        }
+
+        /* Previous CSS styles remain the same */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        #videoContainer {
+            margin: 20px 0;
+        }
+
+        #video {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .question-box {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+
+        .start {
+            background-color: #4CAF50;
+        }
+
+        .stop {
+            background-color: #f44336;
+        }
+
+        .next {
+            background-color: #2196F3;
+        }
+
+        .save {
+            background-color: #9C27B0;
+        }
+
+        .reset {
+            background-color: #607D8B;
+        }
+
+        .auth {
+            background-color: #FF9800;
+        }
+
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .subscription-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .upgrade-button {
+            background: #ff9800;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .button.auth {
+            cursor: pointer;
+            opacity: 1;
+        }
+
+        .modal {
+            display: none;
+            /* Hide initially */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .plans-section {
+            padding: 20px;
+        }
+
+        .qr-section {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .qr-section img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .total-amount {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .plan-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .plan-price {
+            color: #666;
+        }
+
+        /* Grid layout for thumbnails */
+        .recordings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .recording-thumbnail {
+            cursor: pointer;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .recording-thumbnail video {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .recording-info {
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .page-button {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Video modal */
+        .video-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .video-modal-content {
+            position: relative;
+            width: 80%;
+            max-width: 800px;
+            margin: 5% auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="authSection">
+        <h2>Login/Signup</h2>
+        <input type="email" id="emailInput" placeholder="Email">
+        <input type="password" id="passwordInput" placeholder="Password">
+        <button onclick="signUp()" class="button auth">Sign Up</button>
+        <button onclick="signIn()" class="button auth">Sign In</button>
+    </div>
+    <button onclick="signOut()" class="button auth" id="signOutButton" style="display: none;">Sign Out</button>
+    <div id="subscriptionInfo" class="subscription-info hidden">
+        <h3>Your Recording Time</h3>
+        <p>Remaining hours: <span id="remainingHours">0</span></p>
+        <button onclick="upgradePlan()" class="upgrade-button">Upgrade Plan</button>
+    </div>
+
+    <div id="interviewSection" class="hidden">
+        <h1>Mock Interview</h1>
+        <div class="question-box">
+            <h3>Question <span id="questionNumber">1</span>:</h3>
+            <p id="currentQuestion"></p>
+        </div>
+
+        <div id="videoContainer">
+            <video id="video" autoplay playsinline muted></video>
+        </div>
+
+        <div>
+            <button id="startButton" class="button start">Start Recording</button>
+            <button id="stopButton" class="button stop" disabled>Stop Recording</button>
+            <button id="nextButton" class="button next">Next Question</button>
+            <button id="saveButton" class="button save" disabled>Save Recording</button>
+            <button id="resetButton" class="button reset">Reset</button>
+        </div>
+
+        <div id="recordingsList" class="recording-list">
+            <div class="recordings-grid" id="recordingsGrid"></div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+
+        <div id="videoModal" class="video-modal">
+            <div class="video-modal-content">
+                <span class="close-modal" onclick="closeVideoModal()">×</span>
+                <video id="modalVideo" controls style="width: 100%;"></video>
+            </div>
+        </div>
+    </div>
+
+    <div id="upgradeModal" class="modal">
+        <div class="modal-content">
+            <div class="plans-section">
+                <h2>Select Recording Hours</h2>
+                <div class="plan-option" onclick="selectPlan(10)">
+                    <span>10 Hours</span>
+                    <span class="plan-price">₹50</span>
+                </div>
+                <div class="plan-option" onclick="selectPlan(50)">
+                    <span>50 Hours</span>
+                    <span class="plan-price">₹250</span>
+                </div>
+                <div class="plan-option" onclick="selectPlan(100)">
+                    <span>100 Hours</span>
+                    <span class="plan-price">₹500</span>
+                </div>
+                <div id="totalAmount" class="total-amount"></div>
+            </div>
+            <div class="qr-section">
+                <img src="gpay.png" alt="UPI QR Code">
+                <p>Scan and pay with any BHIM UPI app</p>
+                <!-- <div class="payment-logos">
+                    <img src="gpay_logo.png" alt="Google Pay">
+                    <img src="phonepe_logo.png" alt="PhonePe">
+                    <img src="paytm_logo.png" alt="Paytm">
+                </div> -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        // const { createClient } = supabase;
+        const supabaseClient = supabase.createClient(
+            'https://qbodjnxwkzoomzdfnyeb.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFib2Rqbnh3a3pvb216ZGZueWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MTI0NjQsImV4cCI6MjA1MzI4ODQ2NH0.sIcnhZB674AfiLepdLDcSd_igIU96mVVBjk-loTw-94'
+        );
+
+        const ITEMS_PER_PAGE = 12;
+let currentPage = 1;
+
+
+        let recordingStartTime;
+        let userData = null;
+
+
+        // Authentication functions
+        // On initial signup, only create auth record
+        async function signUp() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+
+            const { data, error } = await supabaseClient.auth.signUp({
+                email,
+                password
+            });
+
+            if (error) {
+                alert(error.message);
+                return;
+            }
+            alert('Check your email for verification link');
+        }
+
+        // Create profile on first successful sign in after verification
+        async function signIn() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                alert(error.message);
+                return;
+            }
+
+            // Check if profile exists
+            const { data: profile } = await supabaseClient
+                .from('user_profiles')
+                .select()
+                .eq('user_id', data.user.id)
+                .single();
+
+            // If no profile, create one
+            if (!profile) {
+                const { error: profileError } = await supabaseClient
+                    .from('user_profiles')
+                    .insert([{
+                        user_id: data.user.id,
+                        recording_hours_left: 10,
+                        total_recorded: 0
+                    }]);
+
+                if (profileError) {
+                    alert(profileError.message);
+                    return;
+                }
+            }
+
+            showInterviewSection();
+            loadRecordings();
+        }
+
+        async function loadUserData() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            if (!user) return;
+
+            const { data, error } = await supabaseClient
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', user.id)
+                .single();
+
+            if (error) {
+                console.error('Error loading user data:', error);
+                return;
+            }
+
+            userData = data;
+            updateSubscriptionDisplay();
+        }
+
+        function updateSubscriptionDisplay() {
+            const subscriptionInfo = document.getElementById('subscriptionInfo');
+            const remainingHours = document.getElementById('remainingHours');
+
+            subscriptionInfo.classList.remove('hidden');
+            remainingHours.textContent = userData.recording_hours_left.toFixed(2);
+        }
+
+        function upgradePlan() {
+            document.getElementById('upgradeModal').style.display = 'block';
+        }
+
+
+        async function signOut() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) alert(error.message);
+            else {
+                document.getElementById('authSection').style.display = 'block';
+                document.getElementById('interviewSection').classList.add('hidden');
+                document.getElementById('signOutButton').style.display = 'none';
+            }
+        }
+
+        function showInterviewSection() {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('interviewSection').classList.remove('hidden');
+            document.getElementById('signOutButton').style.display = 'inline-block'; // Changed from 'block'
+            initCamera();
+        }
+
+        // Interview recording logic
+        const questions = [
+            "Tell me about yourself",
+            "What are your greatest strengths?",
+            "Where do you see yourself in 5 years?",
+            "Why should we hire you?",
+            "What is your biggest weakness?"
+        ];
+
+        let currentQuestionIndex = 0;
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
+
+        const video = document.getElementById('video');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const nextButton = document.getElementById('nextButton');
+        const saveButton = document.getElementById('saveButton');
+        const resetButton = document.getElementById('resetButton');
+        const questionElement = document.getElementById('currentQuestion');
+        const questionNumber = document.getElementById('questionNumber');
+
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                alert("Error accessing webcam. Please ensure you have granted permission.");
+            }
+        }
+
+        function updateQuestion() {
+            questionElement.textContent = questions[currentQuestionIndex];
+            questionNumber.textContent = currentQuestionIndex + 1;
+            nextButton.disabled = currentQuestionIndex === questions.length - 1;
+        }
+
+        function startRecording() {
+            if (!userData || userData.recording_hours_left <= 0) {
+                alert('No recording time left. Please upgrade your plan.');
+                return;
+            }
+
+            recordingStartTime = Date.now();
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+            mediaRecorder.start();
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            saveButton.disabled = true;
+        }
+
+        async function stopRecording() {
+            const recordingDuration = (Date.now() - recordingStartTime) / (1000 * 60 * 60); // Convert to hours
+
+            if (recordingDuration > userData.recording_hours_left) {
+                alert('Recording stopped: exceeded remaining time');
+            }
+
+            mediaRecorder.stop();
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            saveButton.disabled = false;
+        }
+
+        async function saveRecording() {
+            if (!recordedChunks.length) {
+                alert('No recording to save. Please record something first.');
+                return;
+            }
+            const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+            if (userError) {
+                alert('Authentication error: ' + userError.message);
+                return;
+            }
+
+            const recordingDuration = (Date.now() - recordingStartTime) / (1000 * 60 * 60);
+
+            // Update user's remaining hours
+            const { data, error } = await supabaseClient
+                .from('user_profiles')
+                .update({
+                    recording_hours_left: userData.recording_hours_left - recordingDuration,
+                    total_recorded: userData.total_recorded + recordingDuration
+                })
+                .eq('user_id', user.id);
+
+            if (error) {
+                alert('Error updating recording time: ' + error.message);
+                return;
+            }
+
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const fileName = `interview-${Date.now()}.webm`;
+
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                .from('recordings')
+                .upload(`${user.id}/${fileName}`, blob);
+
+            if (uploadError) {
+                alert('Error saving recording: ' + uploadError.message);
+                return;
+            }
+
+            const { error: recordingError } = await supabaseClient
+                .from('recordings')
+                .insert([{
+                    file_name: `${user.id}/${fileName}`,
+                    user_id: user.id,
+                    recorded_at: new Date().toISOString(),
+                    duration: recordingDuration
+                }]);
+
+            if (recordingError) {
+                alert('Error saving recording metadata: ' + recordingError.message);
+                return;
+            }
+
+            await loadUserData();
+            alert('Recording saved successfully!');
+            loadRecordings();
+        }
+
+        async function loadRecordings() {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            const { data: recordings } = await supabaseClient
+                .from('recordings')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('recorded_at', { ascending: false });
+
+            const grid = document.getElementById('recordingsGrid');
+            grid.innerHTML = '';
+
+            const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+            const pageRecordings = recordings.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
+            for (const recording of pageRecordings) {
+                const { data } = await supabaseClient.storage
+                    .from('recordings')
+                    .createSignedUrl(recording.file_name, 3600);
+
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'recording-thumbnail';
+                thumbnail.innerHTML = `
+           <video src="${data.signedUrl}" preload="metadata"></video>
+           <div class="recording-info">
+               <div>Date: ${new Date(recording.recorded_at).toLocaleDateString()}</div>
+               <div>Time: ${new Date(recording.recorded_at).toLocaleTimeString()}</div>
+               <div>Duration: ${(recording.duration * 60).toFixed(2)} mins</div>
+           </div>
+       `;
+
+                thumbnail.onclick = () => openVideoModal(data.signedUrl);
+                grid.appendChild(thumbnail);
+            }
+
+            updatePagination(recordings.length);
+        }
+
+        function updatePagination(totalItems) {
+            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const button = document.createElement('div');
+                button.className = `page-button ${i === currentPage ? 'active' : ''}`;
+                button.textContent = i;
+                button.onclick = () => {
+                    currentPage = i;
+                    loadRecordings();
+                };
+                pagination.appendChild(button);
+            }
+        }
+
+        function openVideoModal(videoUrl) {
+            const modal = document.getElementById('videoModal');
+            const video = document.getElementById('modalVideo');
+            video.src = videoUrl;
+            modal.style.display = 'block';
+        }
+
+        function closeVideoModal() {
+            const modal = document.getElementById('videoModal');
+            const video = document.getElementById('modalVideo');
+            video.pause();
+            modal.style.display = 'none';
+        }
+
+
+        function resetInterview() {
+            currentQuestionIndex = 0;
+            updateQuestion();
+            recordedChunks = [];
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording();
+            }
+            saveButton.disabled = true;
+        }
+
+        function selectPlan(hours) {
+            const amount = hours * 5;
+            document.getElementById('totalAmount').textContent = `Total Amount: ₹${amount}`;
+        }
+
+        function upgradePlan() {
+            document.getElementById('upgradeModal').style.display = 'block';
+        }
+
+        function selectPlan(hours) {
+            document.getElementById('qrSection').style.display = 'block';
+        }
+
+        window.onclick = function (event) {
+            if (event.target == document.getElementById('upgradeModal')) {
+                document.getElementById('upgradeModal').style.display = 'none';
+                document.getElementById('qrSection').style.display = 'none';
+            }
+        }
+
+
+        // Event Listeners
+        startButton.addEventListener('click', startRecording);
+        stopButton.addEventListener('click', stopRecording);
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            updateQuestion();
+        });
+        saveButton.addEventListener('click', saveRecording);
+        resetButton.addEventListener('click', resetInterview);
+
+        // Check authentication status on load
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                showInterviewSection();
+                loadUserData();
+                loadRecordings();
+            }
+        });
+
+        // Initialize
+        // initCamera();
+        updateQuestion();
+
+
+        window.onclick = function (event) {
+            if (event.target == document.getElementById('upgradeModal')) {
+                document.getElementById('upgradeModal').style.display = 'none';
+            }
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('videoModal');
+            if (event.target == modal) {
+                closeVideoModal();
+            }
+        }
+
+    </script>
+</body>
+
+</html>

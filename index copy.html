@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mock Interview Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #videoContainer {
+            margin: 20px 0;
+        }
+        #video {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+        }
+        .question-box {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+        .start { background-color: #4CAF50; }
+        .stop { background-color: #f44336; }
+        .next { background-color: #2196F3; }
+        .save { background-color: #9C27B0; }
+        .reset { background-color: #607D8B; }
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mock Interview</h1>
+    <div class="question-box">
+        <h3>Question <span id="questionNumber">1</span>:</h3>
+        <p id="currentQuestion"></p>
+    </div>
+    
+    <div id="videoContainer">
+        <video id="video" autoplay playsinline muted></video>
+    </div>
+
+    <div>
+        <button id="startButton" class="button start">Start Recording</button>
+        <button id="stopButton" class="button stop" disabled>Stop Recording</button>
+        <button id="nextButton" class="button next">Next Question</button>
+        <button id="saveButton" class="button save" disabled>Save Recording</button>
+        <button id="resetButton" class="button reset">Reset</button>
+    </div>
+
+    <script>
+        const questions = [
+            "Tell me about yourself",
+            "What are your greatest strengths?",
+            "Where do you see yourself in 5 years?",
+            "Why should we hire you?",
+            "What is your biggest weakness?"
+        ];
+
+        let currentQuestionIndex = 0;
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
+
+        const video = document.getElementById('video');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const nextButton = document.getElementById('nextButton');
+        const saveButton = document.getElementById('saveButton');
+        const resetButton = document.getElementById('resetButton');
+        const questionElement = document.getElementById('currentQuestion');
+        const questionNumber = document.getElementById('questionNumber');
+
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                alert("Error accessing webcam. Please ensure you have granted permission.");
+            }
+        }
+
+        function updateQuestion() {
+            questionElement.textContent = questions[currentQuestionIndex];
+            questionNumber.textContent = currentQuestionIndex + 1;
+            nextButton.disabled = currentQuestionIndex === questions.length - 1;
+        }
+
+        function startRecording() {
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+            mediaRecorder.start();
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            saveButton.disabled = true;
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            saveButton.disabled = false;
+        }
+
+        function saveRecording() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'interview-recording.webm';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetInterview() {
+            currentQuestionIndex = 0;
+            updateQuestion();
+            recordedChunks = [];
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording();
+            }
+            saveButton.disabled = true;
+        }
+
+        // Event Listeners
+        startButton.addEventListener('click', startRecording);
+        stopButton.addEventListener('click', stopRecording);
+        nextButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            updateQuestion();
+        });
+        saveButton.addEventListener('click', saveRecording);
+        resetButton.addEventListener('click', resetInterview);
+
+        // Initialize
+        initCamera();
+        updateQuestion();
+    </script>
+</body>
+</html>
