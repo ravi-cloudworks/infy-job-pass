@@ -514,6 +514,9 @@
         }
 
         async function startRecording() {
+            // Initialize the camera before starting the recording
+            await initCamera(); // Ensure the camera is initialized
+
             if (!userData || userData.recording_hours_left <= 0) {
                 alert('No recording time left');
                 return;
@@ -526,7 +529,7 @@
 
             // Get streams and combine audio
             const canvasStream = canvas.captureStream();
-            const audioTrack = stream.getAudioTracks()[0];
+            const audioTrack = stream.getAudioTracks()[0]; // Ensure stream is defined
             const combinedStream = new MediaStream([...canvasStream.getTracks(), audioTrack]);
 
             mediaRecorder = new MediaRecorder(combinedStream);
